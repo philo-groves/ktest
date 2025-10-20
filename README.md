@@ -4,6 +4,8 @@ A custom test framework with features that are relevant to Rust-based operating 
 
 **x86_64 is the only currently supported architecture**
 
+Example: https://github.com/philo-groves/example-kernel-kboot-ktest
+
 ## Features:
 - Serial printer for pretty test output
 - Panic handler to continue testing after panic (panic = current test fail)
