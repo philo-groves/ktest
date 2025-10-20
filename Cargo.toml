@@ -1,6 +1,6 @@
 [package]
 name = "ktest"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["Philo Groves <philogroves@gmail.com>"]
 description = "A custom test framework for Rust-based operating system kernels"
