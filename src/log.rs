@@ -1,7 +1,8 @@
-use alloc::string::String;
 use conquer_once::spin::OnceCell;
+use heapless::String;
 use spin::Mutex;
 use uart_16550::SerialPort;
+use crate::MAX_STRING_LENGTH;
 
 /// The global serial port instance
 pub static SERIAL1: OnceCell<Mutex<SerialPort>> = OnceCell::uninit();
@@ -49,7 +50,7 @@ macro_rules! serial_println {
 pub fn _debugcon_print(args: core::fmt::Arguments) {
     // convert args to string
     use core::fmt::Write;
-    let mut s = String::new();
+    let mut s = String::<MAX_STRING_LENGTH>::new();
     s.write_fmt(args).expect("Failed to write to string");
 
     // this is unsafe because we are calling assembly code

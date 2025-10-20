@@ -1,7 +1,7 @@
-use alloc::{boxed::Box, format, string::ToString, vec::Vec};
 use conquer_once::spin::OnceCell;
+use heapless::{format, String};
 use spin::RwLock;
-use crate::{args, qemu, serial_print, serial_println, test::{self, output, TestCase}};
+use crate::{args, qemu, serial_print, serial_println, test::{self, output, TestCase}, MAX_STRING_LENGTH};
 
 /// A static reference to the list of test functions to run. This is unsafe but only set 
 /// once at the start of runner. The static nature of the tests makes it impossible to use 
@@ -22,7 +22,8 @@ pub static CURRENT_MODULE: OnceCell<RwLock<&'static str>> = OnceCell::new(RwLock
 /// Output from this runner is formatted as line-delimited JSON and printed to the debug 
 /// console. This allows for easy parsing of test results by external tools, such as `kboot`.
 pub fn runner(tests: &'static [&'static dyn TestCase]) -> ! {
-    unsafe { TESTS = sort_tests_by_module(tests); }
+    // unsafe { TESTS = sort_tests_by_module(tests); }
+    unsafe { TESTS = tests; }
 
     TEST_RUNNER.get_or_init(|| KernelTestRunner::default());
     TEST_RUNNER.get().unwrap().run_tests(0)
@@ -129,9 +130,9 @@ impl TestRunner for KernelTestRunner {
     fn handle_panic(&self, info: &core::panic::PanicInfo) -> ! {
         // finish the test output, replaces [ok] with panic details
         let location = if let Some(location) = info.location() {
-            format!("{}:{}", location.file(), location.line())
+            format!("{}:{}", location.file(), location.line()).unwrap()
         } else {
-            "unknown location".to_string()
+            String::<MAX_STRING_LENGTH>::try_from("unknown location").unwrap()
         };
         let message = info.message().as_str().unwrap_or("no message");
 
@@ -173,25 +174,6 @@ fn increment_test_index(base: usize) -> bool {
     true
 }
 
-/// Helper function to sort tests by their module path.
-fn sort_tests_by_module(tests: &'static [&'static dyn TestCase]) -> &'static [&'static dyn TestCase] {
-    // create a vector of tuples (module_path, test)
-    let mut tests_with_modules: Vec<(&str, &dyn TestCase)> = tests.iter()
-        .map(|&test| (test.module_path().unwrap_or("unknown_module"), test))
-        .collect();
-
-    // sort the vector by module_path
-    tests_with_modules.sort_by(|a, b| a.0.cmp(b.0));
-
-    // extract the sorted tests
-    let sorted_tests: Vec<&'static dyn TestCase> = tests_with_modules.into_iter()
-        .map(|(_, test)| test)
-        .collect();
-
-    // convert the Vec back to a slice with a static lifetime
-    Box::leak(sorted_tests.into_boxed_slice())
-}
-
 /// Helper function to count the number of tests in a given module.
 fn count_by_module(module_name: &str) -> usize {
     let tests = unsafe { TESTS };
@@ -208,5 +190,8 @@ fn print_test_name(name: &str, result_column: usize) {
     }
 
     let padding = result_column - name.len();
-    serial_print!("{}{}", name, " ".repeat(padding));
+    serial_print!("{}", name);
+    for _ in 0..padding {
+        serial_print!(" ");
+    }
 }

@@ -5,9 +5,6 @@
 #![cfg_attr(test, test_runner(runner))]
 #![cfg_attr(test, reexport_test_harness_main = "test_harness")]
 
-/// Allocations are required for formatting test output as JSON (among other features).
-extern crate alloc;
-
 mod args;
 mod log;
 mod test;
@@ -15,6 +12,12 @@ mod qemu;
 
 /// Re-export the test runner function for use in test binaries.
 pub use test::runner::runner;
+
+/// Maximum length for strings used in this library, to avoid dynamic allocations.
+const MAX_STRING_LENGTH: usize = 1024;
+
+/// Maximum length for large strings (e.g. output of all test names)
+const MAX_STRING_LENGTH_LARGE: usize = MAX_STRING_LENGTH * 10;
 
 /// Initialize the test harness with the given test group. This function should be called
 /// before the main test function is called.
