@@ -17,7 +17,7 @@ mod qemu;
 
 /// Re-export the test runner function for use in test binaries.
 pub use test::runner::runner;
-pub use ktest_macros::test as ktest;
+pub use ktest_macros::{klib, ktest};
 pub use test::{Test, split_module_path, split_module_path_len};
 
 /// Maximum length for strings used in this library, to avoid dynamic allocations.

@@ -74,9 +74,7 @@ dependencies = [
 
 [[package]]
 name = "ktest-macros"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1e4eef12b6c0f4c186974258c988bb57570bd673da1ec3743a8af0b1c6a40c2"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
