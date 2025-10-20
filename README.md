@@ -90,7 +90,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 ################################################################
 # Running 2 library tests for module: kernel::tests
 ----------------------------------------------------------------
-lib_assertion                                               [ok]
+lib_assertion                                               [pass]
 lib_assertion_2                                             [fail] @ src\lib.rs:119: Make sure tests fail correctly
 ```
 
@@ -101,7 +101,7 @@ If you are using this library WITHOUT `kboot`, your JSON output will be line-del
 ```
 {"test_count":2,"test_group":"library"}
 {"tests":["kernel::tests::lib_assertion","kernel::tests::lib_assertion_2"]}
-{"cycle_count":866,"result":"ok","test":"kernel::tests::lib_assertion"}
+{"cycle_count":866,"result":"pass","test":"kernel::tests::lib_assertion"}
 {"cycle_count":0,"location":"src\\lib.rs:119","message":"Make sure tests fail correctly","result":"fail","test":"kernel::tests::lib_assertion_2"}
 ```
 
@@ -114,7 +114,7 @@ If you are using this library WITH `kboot`, the tool will reformat your line-del
     "total": 2,
     "passed": 1,
     "failed": 1,
-    "missed": 0,
+    "ignored": 0,
     "duration": 6266
   },
   "modules": [
@@ -123,7 +123,7 @@ If you are using this library WITH `kboot`, the tool will reformat your line-del
       "tests": [
         {
           "test": "lib_assertion",
-          "result": "ok",
+          "result": "pass",
           "cycle_count": 1142
         },
         {

@@ -1,7 +1,7 @@
 use conquer_once::spin::OnceCell;
 use heapless::{format, String};
 use spin::RwLock;
-use crate::{args, qemu, serial_print, serial_println, test::{self, output, TestCase}, MAX_STRING_LENGTH};
+use crate::{args, qemu, serial_print, serial_println, test::{self, outcome::TestResult, Ignore, ShouldPanic, TestCase}, MAX_STRING_LENGTH};
 
 /// A static reference to the list of test functions to run. This is unsafe but only set 
 /// once at the start of runner. The static nature of the tests makes it impossible to use 
@@ -22,7 +22,6 @@ pub static CURRENT_MODULE: OnceCell<RwLock<&'static str>> = OnceCell::new(RwLock
 /// Output from this runner is formatted as line-delimited JSON and printed to the debug 
 /// console. This allows for easy parsing of test results by external tools, such as `kboot`.
 pub fn runner(tests: &'static [&'static dyn TestCase]) -> ! {
-    // unsafe { TESTS = sort_tests_by_module(tests); }
     unsafe { TESTS = tests; }
 
     TEST_RUNNER.get_or_init(|| KernelTestRunner::default());
@@ -40,7 +39,7 @@ pub trait TestRunner {
     /// Called at the start of each test, returns the starting cycle number.
     fn start_test(&self) -> u64;
     /// Called at the end of each test, with the result and starting cycle number.
-    fn complete_test(&self, is_success: bool, cycle_start: u64);
+    fn complete_test(&self, result: TestResult, cycle_start: u64);
     /// Returns the currently running test, if any.
     fn current_test(&self) -> Option<&'static dyn TestCase>;
     /// Called when a test panics. This should print the panic information, mark the current
@@ -69,8 +68,16 @@ impl TestRunner for KernelTestRunner {
         let tests = unsafe { TESTS };
         for (i, &test) in tests.iter().enumerate().skip(start_index) {
             let cycle_start = self.start_test();
-            test.run();
-            self.complete_test(true, cycle_start);
+
+            match test.ignore() {
+                Ignore::No => {
+                    test.run();
+                    self.complete_test(TestResult::Success, cycle_start);
+                }
+                Ignore::Yes => {
+                    self.complete_test(TestResult::Ignored, cycle_start);
+                }
+            }
 
             if !increment_test_index(i) {
                 break; // no more tests to run
@@ -86,7 +93,8 @@ impl TestRunner for KernelTestRunner {
     fn start_test(&self) -> u64 {
         // check if the current module has changed; if so, reassign it and print a header
         let current_test = self.current_test().unwrap();
-        let module_path = current_test.module_path().unwrap_or("unknown_module");
+        
+        let module_path = current_test.modules().unwrap_or("unknown_module");
         {
             let mut current_module = CURRENT_MODULE.get().unwrap().write();
             if *current_module != module_path {
@@ -101,24 +109,34 @@ impl TestRunner for KernelTestRunner {
         } // scope will release the lock here
 
         // print the test name with padding for aligned results
-        print_test_name(current_test.function_name(), 60);
+        print_test_name(current_test.name(), 58);
 
         // return the current cycle (for duration calculation later)
         read_current_cycle()
     }
 
-    fn complete_test(&self, is_success: bool, cycle_start: u64) {
+    fn complete_test(&self, result: TestResult, cycle_start: u64) {
         let cycle_count = if cycle_start != u64::MAX { // u64::MAX = unknown
             read_current_cycle() - cycle_start
         } else {
             0
         };
 
-        if is_success {
-            let test_name = self.current_test().unwrap().name();
-            test::output::write_test_success(test_name, cycle_count);
-            serial_println!("[ok]");
-        } // panic handler will print [fail] with details (and same for JSON output)
+        match result {
+            TestResult::Success => {
+                let test_name = self.current_test().unwrap().qualified_name();
+                test::output::write_test_success(test_name, cycle_count);
+                serial_println!("[pass]");
+            }
+            TestResult::Failure => {
+                // panic handler will print [fail] with details (and same for JSON output)
+            }
+            TestResult::Ignored => {
+                let test_name = self.current_test().unwrap().qualified_name();
+                test::output::write_test_ignored(test_name);
+                serial_println!("[ignored]");
+            }
+        }
     }
 
     fn current_test(&self) -> Option<&'static dyn TestCase> {
@@ -128,7 +146,7 @@ impl TestRunner for KernelTestRunner {
     }
 
     fn handle_panic(&self, info: &core::panic::PanicInfo) -> ! {
-        // finish the test output, replaces [ok] with panic details
+        // finish the test output, replaces [pass] with panic details
         let location = if let Some(location) = info.location() {
             format!("{}:{}", location.file(), location.line()).unwrap()
         } else {
@@ -136,14 +154,21 @@ impl TestRunner for KernelTestRunner {
         };
         let message = info.message().as_str().unwrap_or("no message");
 
-        // it is expected that the line already has "test_name... "
-        serial_println!("[fail] @ {}: {}", location, message);
+        let current_test = self.current_test().unwrap();
+        let test_name = current_test.qualified_name();
 
-        let test_name = self.current_test().unwrap().name();
-        output::write_test_failure(test_name, location.as_str(), message);
-
-        // mark the current test as failed
-        self.complete_test(false, u64::MAX); // u64::MAX indicates unknown cycle count (temporarily, until we can track cycles during panics)
+        // handle according to whether the test was expected to panic
+        match current_test.should_panic() {
+            ShouldPanic::No => {
+                serial_println!("[fail] @ {}: {}", location, message); // expected that the line already has "test_name... "
+                test::output::write_test_failure(test_name, location.as_str(), message);
+                self.complete_test(TestResult::Failure, u64::MAX);
+            }
+            ShouldPanic::Yes => {
+                test::output::write_test_success(test_name, 0);
+                self.complete_test(TestResult::Success, u64::MAX);
+            }
+        }
 
         // increment the test index to move to the next test (if possible)
         let current_index = *CURRENT_TEST_INDEX.get().unwrap().read();
@@ -178,7 +203,7 @@ fn increment_test_index(base: usize) -> bool {
 fn count_by_module(module_name: &str) -> usize {
     let tests = unsafe { TESTS };
     tests.iter()
-        .filter(|&&test| test.module_path().unwrap_or("") == module_name)
+        .filter(|&&test| test.modules().unwrap_or("") == module_name)
         .count()
 }
 

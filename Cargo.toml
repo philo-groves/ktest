@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/philogroves/ktest"
 
 [dependencies]
+ktest-macros = "0.1.0"
 x86_64 = "0.15.2"
 uart_16550 = "0.4.0"
 conquer-once = { version = "0.4.0", default-features =  false }

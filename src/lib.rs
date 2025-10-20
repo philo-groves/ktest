@@ -1,17 +1,24 @@
 #![no_std]
+
 #![feature(try_blocks)]
+
 #![cfg_attr(test, no_main)]
 #![cfg_attr(test, feature(custom_test_frameworks))]
 #![cfg_attr(test, test_runner(runner))]
 #![cfg_attr(test, reexport_test_harness_main = "test_harness")]
 
+#[cfg(test)]
+extern crate self as ktest;
+
 mod args;
 mod log;
-mod test;
+pub mod test;
 mod qemu;
 
 /// Re-export the test runner function for use in test binaries.
 pub use test::runner::runner;
+pub use ktest_macros::test as ktest;
+pub use test::{Test, split_module_path, split_module_path_len};
 
 /// Maximum length for strings used in this library, to avoid dynamic allocations.
 const MAX_STRING_LENGTH: usize = 1024;
