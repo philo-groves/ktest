@@ -62,7 +62,7 @@ dependencies = [
 
 [[package]]
 name = "ktest"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "conquer-once",
  "heapless",
@@ -75,6 +75,8 @@ dependencies = [
 [[package]]
 name = "ktest-macros"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19685e696521c8d9960b90c40e92e7c42a375cd5a904565ee644e06471ea9df8"
 dependencies = [
  "proc-macro2",
  "quote",
