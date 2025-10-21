@@ -4,9 +4,16 @@ A custom test framework with features that are relevant to Rust-based operating 
 
 **x86_64 is the only currently supported architecture**
 
-Example: https://github.com/philo-groves/example-kernel-kboot-ktest
+## Examples
+
+Single Crate: https://github.com/philo-groves/example-kernel-kboot-ktest
+
+Workspace: https://github.com/philo-groves/example-kernel-kboot-ktest-multicrate
 
 ## Features:
+- Custom `ktest` macro for kernel testing 
+- Support for `#[ignore]` and `#[should_panic]` tags on tests
+- Custom `klib` macros for kernel library crate test setup
 - Serial printer for pretty test output
 - Panic handler to continue testing after panic (panic = current test fail)
 - Details for failure, such as line number and panic message
