@@ -39,7 +39,7 @@ where
 pub enum TestResult {
     Success,
     Failure,
-    Ignored
+    Ignore
 }
 
 impl TestResult {
@@ -47,8 +47,8 @@ impl TestResult {
         matches!(self, TestResult::Success)
     }
 
-    pub fn is_ignored(&self) -> bool {
-        matches!(self, TestResult::Ignored)
+    pub fn is_ignore(&self) -> bool {
+        matches!(self, TestResult::Ignore)
     }
 
     pub fn is_failure(&self) -> bool {

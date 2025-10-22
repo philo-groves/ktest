@@ -121,7 +121,7 @@ If you are using this library WITH `kboot`, the tool will reformat your line-del
     "total": 2,
     "passed": 1,
     "failed": 1,
-    "ignored": 0,
+    "ignore": 0,
     "duration": 6266
   },
   "modules": [

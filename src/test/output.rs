@@ -16,9 +16,9 @@ pub fn write_test_names(tests: &'static [&'static dyn TestCase]) {
     let mut test_names_str: String<MAX_STRING_LENGTH_LARGE> = String::try_from(r#"{ "tests": ["#).unwrap();
     for (i, test) in tests.iter().enumerate() {
         let entry: String<MAX_STRING_LENGTH> = if i == tests.len() - 1 {
-            format!(r#""{}""#, test.qualified_name()).unwrap()
+            format!(r#""{}::{}""#, test.modules().unwrap(), test.name()).unwrap()
         } else {
-            format!(r#""{}", "#, test.qualified_name()).unwrap()
+            format!(r#""{}::{}", "#, test.modules().unwrap(), test.name()).unwrap()
         };
         test_names_str.push_str(&entry).unwrap();
     }
@@ -41,11 +41,11 @@ pub fn write_test_success(test_name: &str, cycle_count: u64) {
 }
 
 /// Writes a JSON object indicating the ignore of a test case, including its name and cycle count.
-pub fn write_test_ignored(test_name: &str) {
+pub fn write_test_ignore(test_name: &str) {
     let test_json: String<MAX_STRING_LENGTH> = format!(r#"
 {{
     "test": "{}",
-    "result": "ignored",
+    "result": "ignore",
     "cycle_count": 0
 }}"#, test_name).unwrap();
     let test_json = replace_heapless_string(&test_json, "\n", "").unwrap();

@@ -12,13 +12,15 @@ extern crate self as ktest;
 
 mod args;
 mod log;
+pub mod memory;
+pub mod macros;
 pub mod test;
 mod qemu;
 
 /// Re-export the test runner function for use in test binaries.
-pub use test::runner::runner;
-pub use ktest_macros::{klib, ktest};
-pub use test::{Test, split_module_path, split_module_path_len};
+pub use ktest_macros::ktest;
+pub use macros::klib::{KlibConfig, KlibConfigBuilder};
+pub use test::{runner::runner, Test, split_module_path, split_module_path_len};
 
 /// Maximum length for strings used in this library, to avoid dynamic allocations.
 const MAX_STRING_LENGTH: usize = 1024;
@@ -35,6 +37,8 @@ const MAX_STRING_LENGTH_LARGE: usize = MAX_STRING_LENGTH * 10;
 /// ktest::init_harness("library");
 /// test_main();
 /// ```
+/// 
+/// If you are using the `klib!` macro, this function is called automatically.
 /// 
 pub fn init_harness(test_group: &str) {
     args::set_test_group(test_group);
@@ -54,6 +58,8 @@ pub fn init_harness(test_group: &str) {
 ///     ktest::panic(info)
 /// }
 /// ```
+/// 
+/// If you are using the `klib!` macro, this function is included automatically.
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
     use crate::test::runner::TestRunner;
     use crate::test::runner::TEST_RUNNER;

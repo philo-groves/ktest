@@ -75,7 +75,7 @@ impl TestRunner for KernelTestRunner {
                     self.complete_test(TestResult::Success, cycle_start);
                 }
                 Ignore::Yes => {
-                    self.complete_test(TestResult::Ignored, cycle_start);
+                    self.complete_test(TestResult::Ignore, cycle_start);
                 }
             }
 
@@ -124,17 +124,19 @@ impl TestRunner for KernelTestRunner {
 
         match result {
             TestResult::Success => {
-                let test_name = self.current_test().unwrap().qualified_name();
-                test::output::write_test_success(test_name, cycle_count);
+                let current_test = self.current_test().unwrap();
+                let test_name: String<MAX_STRING_LENGTH> = format!("{}::{}", current_test.modules().unwrap(), current_test.name()).unwrap();
+                test::output::write_test_success(&test_name, cycle_count);
                 serial_println!("[pass]");
             }
             TestResult::Failure => {
                 // panic handler will print [fail] with details (and same for JSON output)
             }
-            TestResult::Ignored => {
-                let test_name = self.current_test().unwrap().qualified_name();
-                test::output::write_test_ignored(test_name);
-                serial_println!("[ignored]");
+            TestResult::Ignore => {
+                let current_test = self.current_test().unwrap();
+                let test_name: String<MAX_STRING_LENGTH> = format!("{}::{}", current_test.modules().unwrap(), current_test.name()).unwrap();
+                test::output::write_test_ignore(&test_name);
+                serial_println!("[ignore]");
             }
         }
     }
@@ -155,17 +157,16 @@ impl TestRunner for KernelTestRunner {
         let message = info.message().as_str().unwrap_or("no message");
 
         let current_test = self.current_test().unwrap();
-        let test_name = current_test.qualified_name();
+        let test_name: String<MAX_STRING_LENGTH> = format!("{}::{}", current_test.modules().unwrap(), current_test.name()).unwrap();
 
         // handle according to whether the test was expected to panic
         match current_test.should_panic() {
             ShouldPanic::No => {
                 serial_println!("[fail] @ {}: {}", location, message); // expected that the line already has "test_name... "
-                test::output::write_test_failure(test_name, location.as_str(), message);
+                test::output::write_test_failure(&test_name, location.as_str(), message);
                 self.complete_test(TestResult::Failure, u64::MAX);
             }
             ShouldPanic::Yes => {
-                test::output::write_test_success(test_name, 0);
                 self.complete_test(TestResult::Success, u64::MAX);
             }
         }

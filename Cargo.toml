@@ -1,6 +1,6 @@
 [package]
 name = "ktest"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2024"
 authors = ["Philo Groves <philogroves@gmail.com>"]
 description = "A custom test framework for Rust-based operating system kernels"
@@ -8,9 +8,15 @@ license = "MIT"
 repository = "https://github.com/philogroves/ktest"
 
 [dependencies]
-ktest-macros = "0.1.1"
+bootloader_api = "0.11.12"
+ktest-macros = "0.1.2"
+linked_list_allocator = "0.10.5"
 x86_64 = "0.15.2"
 uart_16550 = "0.4.0"
 conquer-once = { version = "0.4.0", default-features =  false }
 spin = "0.10.0"
 heapless = "0.9.1"
+
+[features]
+default = []
+allocator = []
