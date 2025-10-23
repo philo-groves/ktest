@@ -68,7 +68,7 @@ dependencies = [
 
 [[package]]
 name = "ktest"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "bootloader_api",
  "conquer-once",

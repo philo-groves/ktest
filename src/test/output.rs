@@ -3,8 +3,9 @@ use crate::{debugcon_println, test::TestCase, MAX_STRING_LENGTH, MAX_STRING_LENG
 
 /// Writes a JSON object indicating the start of a test group with its name and test count.
 pub fn write_test_group(test_group: &str, test_count: usize) {
-    let test_group_json: String<MAX_STRING_LENGTH> = format!(r#"{{ "test_group": "{}", "test_count": {} }}"#, 
-        test_group, test_count).unwrap();
+    let use_kview = cfg!(feature = "kview");
+    let test_group_json: String<MAX_STRING_LENGTH> = format!(r#"{{ "test_group": "{}", "test_count": {}, "use_kview": {} }}"#, 
+        test_group, test_count, use_kview).unwrap();
     let test_group_json = replace_heapless_string(&test_group_json, "\n", "").unwrap();
     let test_group_json = replace_heapless_string(&test_group_json, "\t", "").unwrap();
 

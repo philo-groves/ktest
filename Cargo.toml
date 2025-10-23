@@ -1,6 +1,6 @@
 [package]
 name = "ktest"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 authors = ["Philo Groves <philogroves@gmail.com>"]
 description = "A custom test framework for Rust-based operating system kernels"
@@ -18,5 +18,6 @@ spin = "0.10.0"
 heapless = "0.9.1"
 
 [features]
-default = []
+default = ["kview"]
 allocator = []
+kview = []
