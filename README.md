@@ -11,14 +11,18 @@ Single Crate: https://github.com/philo-groves/example-kernel-kboot-ktest
 Workspace: https://github.com/philo-groves/example-kernel-kboot-ktest-multicrate
 
 ## Features:
-- Custom `ktest` macro for kernel testing 
-- Support for `#[ignore]` and `#[should_panic]` tags on tests
-- Custom `klib` macros for kernel library crate test setup
-- Serial printer for pretty test output
-- Panic handler to continue testing after panic (panic = current test fail)
-- Details for failure, such as line number and panic message
-- Tests sorted and executed by module
-- JSON test output from QEMU using the `-debugcon` device
+- Custom `#[ktest]` macro for test functions
+- Support for `#[ignore]` and `#[should_panic]` tags
+- Custom `klib!("test_group");` macro for test setup:
+  - Kernel entrypoint for tests
+  - Panic handler for tests
+  - Allows for function calling before/after tests
+  - Allows for bootloader info injection
+- Exports JSON data through QEMU `-debugcon` device
+- Writes human-readable results through serial (CLI)
+- Panic recovery; panic = current test failure
+- Details for failure, e.g. line number and panic message
+- Optionally link a basic heap allocator for tests (feature: `allocator`)
 
 ## Requirements
 - A Rust-based kernel
@@ -27,19 +31,17 @@ Workspace: https://github.com/philo-groves/example-kernel-kboot-ktest-multicrate
 
 ## Setup
 
-Add/change the following to your main.rs:
+The main.rs test setup is slightly more complex than lib.rs tests. In your main.rs, add the following `#![cfg_attr(test, ...)]` and `#[cfg(test)]` attributes/sections to your main.rs:
 
 ```
-// IMPORTANT: include `ktest::runner` as the test runner
+#![cfg_attr(test, feature(custom_test_frameworks))]            // enable custom test frameworks
+#![cfg_attr(test, test_runner(ktest::runner))]                 // assign ktest as the runner
+#![cfg_attr(test, reexport_test_harness_main = "test_main")]   // always use "test_main", expected by ktest/kboot
 
-#![cfg_attr(test, feature(custom_test_frameworks))]
-#![cfg_attr(test, test_runner(ktest::runner))]
-#![cfg_attr(test, reexport_test_harness_main = "test_main")]
-
-fn kernel_main(boot_info: &'static mut bootloader_api::BootInfo) -> ! { // any bootloader should work
+fn kernel_main(boot_info: &'static mut bootloader_api::BootInfo) -> ! {
     // initialize the kernel
 
-    // IMPORTANT: run tests if we are in test mode
+    // IMPORTANT: run tests if we are in test mode; this is the primary inclusion for main.rs
     #[cfg(test)]
     {
         ktest::init_harness("binary");
@@ -50,50 +52,69 @@ fn kernel_main(boot_info: &'static mut bootloader_api::BootInfo) -> ! { // any b
 }
 ```
 
-And in your lib.rs:
+#### Basic lib.rs example:
+
+For lib.rs packages, there exists as `klib!("test group");` macro which will inject the proper source code for:
+
+- Bootloader configuration
+- Rust entrypoint
+- Panic handling and recovery (panic = current test fail)
+- A basic allocator, if enabled through the `allocator` feature (default: false)
+
+See the relatively small source file: https://github.com/philo-groves/ktest/blob/main/src/macros/klib.rs
 
 ```
-// IMPORTANT: include `ktest::runner` as the test runner
+// the following 3 lines are the exact same from the main.rs example; both files require the setup
+#![cfg_attr(test, feature(custom_test_frameworks))]            // enable custom test frameworks
+#![cfg_attr(test, test_runner(ktest::runner))]                 // assign ktest as the runner
+#![cfg_attr(test, reexport_test_harness_main = "test_main")]   // always use "test_main", expected by ktest/kboot
 
-#![cfg_attr(test, feature(custom_test_frameworks))]
-#![cfg_attr(test, test_runner(ktest::runner))]
-#![cfg_attr(test, reexport_test_harness_main = "test_main")]
-
-// IMPORTANT: make sure your library has a test-only start function
-
+// "basic_crate" will act as a label for this test group; make sure this is test-only
 #[cfg(test)]
-bootloader_api::entry_point!(kernel_test_main, config = &BOOTLOADER_CONFIG); // any bootloader should work
+ktest::klib!("basic_crate");
+```
 
-#[cfg(test)]
-fn kernel_test_main(boot_info: &'static mut bootloader_api::BootInfo) -> ! { // any bootloader should work
-    // initialize the kernel
+#### Complex librs. example:
 
-    ktest::init_harness("library");
-    test_main();
-    
-    // continue running the kernel
+The `klib!("test group");` macro can be expanded with two optional arguments: `klib_config` and `boot_config`:
+
+- `klib_config`: Configurations for the test runner; currently, this holds function references to run before or after tests.
+- `boot_config`: A direct reference to the [bootloader](https://github.com/rust-osdev/bootloader/blob/main/api/src/config.rs#L11) configuration
+
+```
+#[cfg(test)] // klib_config and boot_config are optional
+ktest::klib!("extended_crate", klib_config = &KLIB_CONFIG, boot_config = &BOOTLOADER_CONFIG);
+
+#[cfg(test)] // this config is optional
+pub const KLIB_CONFIG: ktest::KlibConfig = ktest::KlibConfigBuilder::new_default()
+    .before_tests(|boot_info| init(boot_info))
+    .after_tests(|| teardown())
+    .build();
+
+#[cfg(test)] // this config is optional
+pub const BOOTLOADER_CONFIG: bootloader_api::BootloaderConfig = {
+    const HIGHER_HALF_START: u64 = 0xffff_8000_0000_0000;
+    const PHYSICAL_MEMORY_OFFSET: u64 = 0x0000_0880_0000_0000;
+
+    let mut config = bootloader_api::BootloaderConfig::new_default();
+    config.mappings.physical_memory = Some(bootloader_api::config::Mapping::FixedAddress(PHYSICAL_MEMORY_OFFSET));
+    config.mappings.dynamic_range_start = Some(HIGHER_HALF_START);
+    config
+};
+
+#[cfg(test)] // this function is optional
+pub fn init(_boot_info: &'static bootloader_api::BootInfo) {
+    // Setup code to run before tests, e.g. kernel initialization
 }
 
-// IMPORTANT: You should have a panic handler specifically for tests
-
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    // your original panic handler
-}
-
-#[cfg(test)]
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    ktest::panic(info) // delegate to `ktest`
+#[cfg(test)] // this function is optional
+pub fn teardown() {
+    // Teardown code to run after tests
 }
 ```
 
 ## Example Output
-
-### Serial (pretty print):
 ```
-
 ################################################################
 # Running 2 library tests for module: kernel::tests
 ----------------------------------------------------------------
