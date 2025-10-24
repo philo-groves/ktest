@@ -31,7 +31,7 @@ Workspace: https://github.com/philo-groves/example-kernel-kboot-ktest-multicrate
 
 ## Setup
 
-The main.rs test setup is slightly more complex than lib.rs tests. In your main.rs, add the following `#![cfg_attr(test, ...)]` and `#[cfg(test)]` attributes/sections to your main.rs:
+The main.rs test setup is slightly more complex than lib.rs tests. In your main.rs, add the following `#![cfg_attr(test, ...)]` and `#[cfg(test)]` attributes/sections:
 
 ```
 #![cfg_attr(test, feature(custom_test_frameworks))]            // enable custom test frameworks
