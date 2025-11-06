@@ -4,12 +4,12 @@ use x86_64::{structures::paging::{OffsetPageTable, PageTable}, VirtAddr};
 
 static KERNEL_PAGE_TABLE: OnceCell<Mutex<OffsetPageTable<'static>>> = OnceCell::uninit();
 
-pub fn get_kernel_page_table(boot_info: &'static bootloader_api::BootInfo) -> &'static Mutex<OffsetPageTable<'static>> {
-    KERNEL_PAGE_TABLE.get_or_init(|| Mutex::new(init_kernel_page_table(boot_info)))
+pub fn get_kernel_page_table(physical_memory_offset: Option<u64>) -> &'static Mutex<OffsetPageTable<'static>> {
+    KERNEL_PAGE_TABLE.get_or_init(|| Mutex::new(init_kernel_page_table(physical_memory_offset)))
 }
 
-fn init_kernel_page_table(boot_info: &'static bootloader_api::BootInfo) -> OffsetPageTable<'static> {
-    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset.into_option()
+fn init_kernel_page_table(physical_memory_offset: Option<u64>) -> OffsetPageTable<'static> {
+    let physical_memory_offset = VirtAddr::new(physical_memory_offset
         .expect("BootInfo is missing physical_memory_offset"));
 
     unsafe {

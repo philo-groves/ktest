@@ -8,7 +8,7 @@ pub const HEAP_SIZE: u64 = 100 * 1024; // 100 KB
 #[cfg(feature = "allocator")]
 static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-pub fn init_allocator_if_enabled(_boot_info: &'static bootloader_api::BootInfo) -> Result<(), MapToError<Size4KiB>> {
+pub fn init_allocator_if_enabled(_physical_memory_offset: Option<u64>) -> Result<(), MapToError<Size4KiB>> {
     #[cfg(not(feature = "allocator"))]
     {
         Ok(())
@@ -31,11 +31,10 @@ pub fn init_allocator_if_enabled(_boot_info: &'static bootloader_api::BootInfo) 
 
         for page in page_range {
             // important: locks are dropped at the end of each iteration (locks should be as microscopic as possible)
-            let mut mapper = paging::get_kernel_page_table(_boot_info).lock();
-            let mut frame_allocator = frame::get_frame_allocator(_boot_info).lock();
+            let mut mapper = paging::get_kernel_page_table(_physical_memory_offset).lock();
+            let mut frame_allocator = frame::get_frame_allocator(_physical_memory_offset).lock();
 
-            let frame = frame_allocator
-                .allocate_frame()
+            let frame = frame_allocator.allocate_frame()
                 .ok_or(MapToError::FrameAllocationFailed)?;
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
