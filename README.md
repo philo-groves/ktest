@@ -113,6 +113,21 @@ pub fn teardown() {
 }
 ```
 
+## Limine Support
+
+`kboot` and `ktest` both support Limine as an optional bootloader. Both of these programs must have their `limine` feature enabled.
+
+In your `kboot` runner, usually in .cargo/config.toml, use the `--limine` flag:
+```
+kboot --limine
+```
+
+In your kernel's `ktest` dependency inclusion, enable the `limine` feature:
+```
+[dev-dependencies]
+ktest = { version = "0.1.6", features = ["limine"] }
+```
+
 ## Example Output
 ```
 ################################################################
