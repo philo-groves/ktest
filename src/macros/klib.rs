@@ -76,6 +76,14 @@ macro_rules! klib {
         const _: () = {
             // note: the triple underscore (___) prefix is to avoid name collisions
 
+            #[used]
+            #[unsafe(link_section = ".requests_start_marker")]
+            static ___START_MARKER: limine::request::RequestsStartMarker = limine::request::RequestsStartMarker::new();
+
+            #[used]
+            #[unsafe(link_section = ".requests_end_marker")]
+            static ___END_MARKER: limine::request::RequestsEndMarker = limine::request::RequestsEndMarker::new();
+
             static ___KLIB_CONFIG: ktest::KlibConfig = $klib_config;
 
             #[panic_handler]
@@ -83,10 +91,9 @@ macro_rules! klib {
                 ktest::panic(info)
             }
 
-            pub extern "C" fn ___kernel_test_main() -> ! {
+            #[unsafe(no_mangle)]
+            pub extern "C" fn _start() -> ! {
                 ktest::init_harness($test_group);
-                // ktest::memory::heap::init_allocator_if_enabled(boot_info)
-                //     .expect("Heap allocator initialization failed");
 
                 if let Some(before_tests) = ___KLIB_CONFIG.before_tests {
                     before_tests();
