@@ -25,9 +25,6 @@ pub use test::{runner::runner, Test, split_module_path, split_module_path_len};
 /// Maximum length for strings used in this library, to avoid dynamic allocations.
 const MAX_STRING_LENGTH: usize = 1024;
 
-/// Maximum length for large strings (e.g. output of all test names)
-const MAX_STRING_LENGTH_LARGE: usize = MAX_STRING_LENGTH * 10;
-
 /// Initialize the test harness with the given test group. This function should be called
 /// before the main test function is called.
 /// 

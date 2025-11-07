@@ -1,5 +1,5 @@
 use heapless::{format, String};
-use crate::{debugcon_println, test::TestCase, MAX_STRING_LENGTH, MAX_STRING_LENGTH_LARGE};
+use crate::{debugcon_println, MAX_STRING_LENGTH};
 
 /// Writes a JSON object indicating the start of a test group with its name and test count.
 pub fn write_test_group(test_group: &str, test_count: usize) {
@@ -10,21 +10,6 @@ pub fn write_test_group(test_group: &str, test_count: usize) {
     let test_group_json = replace_heapless_string(&test_group_json, "\t", "").unwrap();
 
     debugcon_println!("{}", test_group_json);
-}
-
-/// Writes a JSON array of all test names. Helps to verify that all tests were ran in the case of a crash.
-pub fn write_test_names(tests: &'static [&'static dyn TestCase]) {
-    let mut test_names_str: String<MAX_STRING_LENGTH_LARGE> = String::try_from(r#"{ "tests": ["#).unwrap();
-    for (i, test) in tests.iter().enumerate() {
-        let entry: String<MAX_STRING_LENGTH> = if i == tests.len() - 1 {
-            format!(r#""{}::{}""#, test.modules().unwrap(), test.name()).unwrap()
-        } else {
-            format!(r#""{}::{}", "#, test.modules().unwrap(), test.name()).unwrap()
-        };
-        test_names_str.push_str(&entry).unwrap();
-    }
-    test_names_str.push_str("] }").unwrap();
-    debugcon_println!("{}", test_names_str);
 }
 
 /// Writes a JSON object indicating the success of a test case, including its name and cycle count.

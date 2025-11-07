@@ -1,7 +1,7 @@
 use conquer_once::spin::OnceCell;
 use heapless::{format, String};
 use spin::RwLock;
-use crate::{args, qemu, serial_print, serial_println, test::{self, outcome::TestResult, Ignore, ShouldPanic, TestCase}, MAX_STRING_LENGTH};
+use crate::{MAX_STRING_LENGTH, args, qemu, serial_print, serial_println, test::{self, Ignore, ShouldPanic, TestCase, outcome::TestResult}};
 
 /// A static reference to the list of test functions to run. This is unsafe but only set 
 /// once at the start of runner. The static nature of the tests makes it impossible to use 
@@ -57,7 +57,6 @@ impl TestRunner for KernelTestRunner {
         let tests = unsafe { TESTS };
 
         test::output::write_test_group(test_group, tests.len());
-        test::output::write_test_names(tests);
     }
 
     fn run_tests(&self, start_index: usize) -> ! {
